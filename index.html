@@ -114,15 +114,12 @@
     <div class="card">
       <div class="row">
         <input type="text" id="taskInput" placeholder="Enter a task..." />
+        <input type="date" id="taskDate" title="Task date (defaults to today)" />
       </div>
       <button class="btn-add" onclick="addTask()">Add Task</button>
     </div>
 
     <div class="card">
-      <div class="row">
-        <input type="date" id="filterDate" onchange="render()" />
-        <button class="btn-clear" onclick="clearFilter()">Clear Filter</button>
-      </div>
       <ul id="taskList"></ul>
     </div>
   </div>
@@ -139,10 +136,13 @@
 
   function addTask() {
     const input = document.getElementById('taskInput');
+    const dateInput = document.getElementById('taskDate');
     const text = input.value.trim();
     if (!text) return;
-    tasks.push({ id: Date.now(), text, completed: false, date: todayStr() });
+    const date = dateInput.value || todayStr();
+    tasks.push({ id: Date.now(), text, completed: false, date });
     input.value = '';
+    dateInput.value = '';
     save(); render();
   }
 
@@ -165,15 +165,9 @@
     save(); render();
   }
 
-  function clearFilter() {
-    document.getElementById('filterDate').value = '';
-    render();
-  }
-
   function render() {
-    const filter = document.getElementById('filterDate').value;
     const list = document.getElementById('taskList');
-    const visible = filter ? tasks.filter(t => t.date === filter) : tasks;
+    const visible = tasks;
 
     list.innerHTML = '';
     if (visible.length === 0) {
