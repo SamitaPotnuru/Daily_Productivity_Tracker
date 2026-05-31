@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Daily Productivity Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    padding: 20px;
+    color: #1f2937;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 2rem; margin-bottom: 24px; color: #1f2937; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .stat .label { font-size: 0.8rem; color: #6b7280; margin-bottom: 4px; }
+  .stat .value { font-size: 1.4rem; font-weight: 700; color: #4f46e5; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 16px;
+  }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  input[type="text"], input[type="date"] {
+    flex: 1;
+    min-width: 180px;
+    padding: 12px 14px;
+    border: 2px solid #c4b5fd;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    background: #fff;
+  }
+  input[type="text"]:focus, input[type="date"]:focus { border-color: #7c3aed; }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 10px 16px;
+    color: #fff;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  button:hover { opacity: 0.9; }
+  button:active { transform: scale(0.97); }
+
+  .btn-add {
+    width: 100%;
+    background: linear-gradient(90deg, #7c3aed, #4f46e5);
+    padding: 14px;
+    font-size: 1.05rem;
+    margin-top: 6px;
+  }
+  .btn-edit { background: #8b5cf6; }
+  .btn-delete { background: #ef4444; }
+  .btn-toggle { background: #10b981; }
+  .btn-clear { background: #6b7280; }
+
+  ul { list-style: none; }
+  li {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .task-main { flex: 1; min-width: 160px; }
+  .task-text { font-size: 1rem; }
+  .task-date { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+  .completed .task-text { text-decoration: line-through; color: #9ca3af; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .empty { text-align: center; color: #9ca3af; padding: 20px 0; }
+
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Productivity Tracker</h1>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Total</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat"><div class="label">Completed</div><div class="value" id="statDone">0</div></div>
+      <div class="stat"><div class="label">Pending</div><div class="value" id="statPending">0</div></div>
+      <div class="stat"><div class="label">Efficiency</div><div class="value" id="statEff">0%</div></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <input type="text" id="taskInput" placeholder="Enter a task..." />
+      </div>
+      <button class="btn-add" onclick="addTask()">Add Task</button>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <input type="date" id="filterDate" onchange="render()" />
+        <button class="btn-clear" onclick="clearFilter()">Clear Filter</button>
+      </div>
+      <ul id="taskList"></ul>
+    </div>
+  </div>
+
+<script>
+  let tasks = JSON.parse(localStorage.getItem('dpt_tasks') || '[]');
+
+  function save() { localStorage.setItem('dpt_tasks', JSON.stringify(tasks)); }
+
+  function todayStr() {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  }
+
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const text = input.value.trim();
+    if (!text) return;
+    tasks.push({ id: Date.now(), text, completed: false, date: todayStr() });
+    input.value = '';
+    save(); render();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    save(); render();
+  }
+
+  function editTask(id) {
+    const t = tasks.find(t => t.id === id);
+    if (!t) return;
+    const v = prompt('Edit task:', t.text);
+    if (v !== null && v.trim()) { t.text = v.trim(); save(); render(); }
+  }
+
+  function toggleTask(id) {
+    const t = tasks.find(t => t.id === id);
+    if (!t) return;
+    t.completed = !t.completed;
+    save(); render();
+  }
+
+  function clearFilter() {
+    document.getElementById('filterDate').value = '';
+    render();
+  }
+
+  function render() {
+    const filter = document.getElementById('filterDate').value;
+    const list = document.getElementById('taskList');
+    const visible = filter ? tasks.filter(t => t.date === filter) : tasks;
+
+    list.innerHTML = '';
+    if (visible.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks yet. Add one above!</li>';
+    } else {
+      visible.forEach(t => {
+        const li = document.createElement('li');
+        if (t.completed) li.classList.add('completed');
+        li.innerHTML = `
+          <div class="task-main">
+            <div class="task-text"></div>
+            <div class="task-date">${t.date}</div>
+          </div>
+          <div class="actions">
+            <button class="btn-toggle">${t.completed ? 'Undo' : 'Done'}</button>
+            <button class="btn-edit">Edit</button>
+            <button class="btn-delete">Delete</button>
+          </div>`;
+        li.querySelector('.task-text').textContent = t.text;
+        const [bToggle, bEdit, bDel] = li.querySelectorAll('button');
+        bToggle.onclick = () => toggleTask(t.id);
+        bEdit.onclick = () => editTask(t.id);
+        bDel.onclick = () => deleteTask(t.id);
+        list.appendChild(li);
+      });
+    }
+
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const pending = total - done;
+    const eff = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statDone').textContent = done;
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statEff').textContent = eff + '%';
+  }
+
+  document.getElementById('taskInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  render();
+</script>
+</body>
+</html>
